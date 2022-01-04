@@ -54,17 +54,29 @@ get_ssh_user() {
   echo $ssh_user
 }
 
+get_ssh_command() {
+  local pid="$1"
+  local cmd
+  until [ -z "$pid" ] || cmd="$(ps -o command -p "$pid" | xargs -I{} echo {} | grep ssh)"; do
+    pid="$(pgrep -P "$pid")"
+    cmd=''
+  done
+  echo "$cmd"
+}
+
 get_remote_info() {
   local command=$1
 
   # First get the current pane command pid to get the full command with arguments
-  local cmd=$({ pgrep -flaP `tmux display-message -p "#{pane_pid}"` ; ps -o command -p `tmux display-message -p "#{pane_pid}"` ; } | xargs -I{} echo {} | grep ssh | sed -E 's/^[0-9]*[[:blank:]]*ssh //')
+  local pane_pid="$(tmux display-message -p "#{pane_pid}")"
+
+  local cmd=$(get_ssh_command "$pane_pid" | sed -E 's/^[0-9]*[[:blank:]]*[a-z/]*ssh //')
 
   local port=$(parse_ssh_port "$cmd")
 
-  local cmd=$(echo $cmd|sed 's/\-p\s*'"$port"'//g')
-  local user=$(echo $cmd | awk '{print $NF}'|cut -f1 -d@)
-  local host=$(echo $cmd | awk '{print $NF}'|cut -f2 -d@)
+  local cmd=$(echo $cmd | sed 's/\-p\s*'"$port"'//g;s/.* \([^\s]*\) -- .*/\1/')
+  local user=$(echo $cmd | awk '{print $NF}' | cut -f1 -d@)
+  local host=$(echo $cmd | awk '{print $NF}' | cut -f2 -d@)
 
   if [ $user == $host ]; then
     local user=$(get_ssh_user $host)
@@ -99,5 +111,5 @@ ssh_connected() {
   # Get current pane command
   local cmd=$(tmux display-message -p "#{pane_current_command}")
 
-  [ $cmd = "ssh" ] || [ $cmd = "sshpass" ]
+  [ "$cmd" = "ssh" ] || [ "$cmd" = "sshpass" ] || [ "$cmd" = "expect" ]
 }
