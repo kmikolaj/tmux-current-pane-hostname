@@ -74,7 +74,7 @@ get_remote_info() {
 
   local port=$(parse_ssh_port "$cmd")
 
-  local cmd=$(echo $cmd | sed 's/\-p\s*'"$port"'//g;s/.* \([^\s]*\) -- .*/\1/')
+  local cmd=$(echo $cmd | sed 's/\-p\s*'"$port"'//g;s/.* \([^\s]*\) --.*/\1/')
   local user=$(echo $cmd | awk '{print $NF}' | cut -f1 -d@)
   local host=$(echo $cmd | awk '{print $NF}' | cut -f2 -d@)
 
